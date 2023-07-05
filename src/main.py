@@ -1,10 +1,11 @@
 from typing import List, Optional
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, status, Response
 from schemas.models import Post
 
 app = FastAPI()
 
 my_posts = []
+
 
 def find_post(id: int) -> Optional[dict]:
     """
@@ -16,7 +17,7 @@ def find_post(id: int) -> Optional[dict]:
     if post:
         return {"data": post}
     raise HTTPException(
-        status_code=404, detail="Post not found - check if the id is correct"
+        status_code=status.HTTP_404_NOT_FOUND, detail=f"Post {id} not found"
     )
 
 
@@ -28,7 +29,7 @@ def get_max_id_from_posts() -> int:
     return max((post["id"] for post in my_posts), default=0)
 
 
-@app.get("/status", status_code=200)
+@app.get("/status", status_code=status.HTTP_200_OK)
 def root() -> dict:
     """Server status endpoint. Returns a status message."""
     return {"Message": "Server is running"}
@@ -43,7 +44,7 @@ def get_posts() -> dict:
     return {"data": my_posts}
 
 
-@app.post("/posts")
+@app.post("/posts", status_code=status.HTTP_201_CREATED)
 async def create_post(post: Post) -> dict:
     """
     Endpoint to create a new post.
@@ -57,17 +58,6 @@ async def create_post(post: Post) -> dict:
     return {"data": post_dict}
 
 
-@app.get("/posts/latest")
-def get_latest_post() -> dict:
-    """
-    Endpoint to get the latest post.
-    :return: The latest post in a dictionary under the 'data' key.
-    """
-    id = get_max_id_from_posts()
-    data = find_post(int(id))
-    return {"data": data}
-
-
 @app.get("/posts/{id}")
 def get_post_by_id(id: int) -> dict:
     """
@@ -77,3 +67,27 @@ def get_post_by_id(id: int) -> dict:
     """
     data = find_post(id)
     return {"data": data}
+
+
+@app.delete("/posts/{id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_post(id: int):
+    data = find_post(id)
+    if data:
+        global my_posts
+        my_posts = [
+            post for post in my_posts if post["id"] != id
+        ]  # creates the array of data with everything but that id
+        return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@app.put("/posts/{id}", status_code=status.HTTP_202_ACCEPTED)
+def update_post(id: int, post: Post):
+    existing_post = find_post(id)
+    if existing_post:
+        global my_posts
+        my_posts = [post for post in my_posts if post["id"] != id]
+        updated_post = existing_post["data"]
+        update_data = post.dict(exclude_unset=True)
+        updated_post.update(update_data)
+        my_posts.append(updated_post)
+        return {"response": "Post updated successfully", "data": updated_post}
