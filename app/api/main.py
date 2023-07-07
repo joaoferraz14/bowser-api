@@ -1,9 +1,20 @@
+import os
 from typing import List, Optional
 from fastapi import FastAPI, HTTPException, status, Response
 from ..schemas.models import Post
-from ..adapters.psql_connector import DatabaseConnection, QueryDatabase
+from ..adapters.psql_database_manager import DatabaseManager
+from dotenv import load_dotenv
+from ..utils.utils import path_builder
+
+load_dotenv()
+
+CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+SQL_FOLDER = "../sql-statements"
 
 app = FastAPI()
+
+db_manager = DatabaseManager()
+query_database = db_manager.connect_to_database()
 
 my_posts = []
 
@@ -42,7 +53,11 @@ def get_posts() -> dict:
     Endpoint to get all the posts.
     :return: All posts in a dictionary under the 'data' key.
     """
-    return {"data": my_posts}
+    sql_file_path = path_builder(CURRENT_DIR, SQL_FOLDER, "get_all_posts.sql")
+    with open(sql_file_path, "r") as query:
+        query_database.execute_query(query.read())
+        rows = query_database.fetch_all_rows()
+    return {"data": rows}
 
 
 @app.post("/posts", status_code=status.HTTP_201_CREATED)
@@ -52,11 +67,12 @@ async def create_post(post: Post) -> dict:
     :param post: Post input model.
     :return: The newly created post in a dictionary under the 'data' key.
     """
-    post_dict = post.dict()
-    max_id = get_max_id_from_posts()
-    post_dict["id"] = max_id + 1
-    my_posts.append(post_dict)
-    return {"data": post_dict}
+    sql_file_path = path_builder(CURRENT_DIR, SQL_FOLDER, "create_new_post.sql")
+    with open(sql_file_path, "r") as query:
+        query = query.read()
+        query_database.execute_query(query, (post.title, post.content, post.published))
+    query_database.commit_changes_to_db()
+    return {"data": post}
 
 
 @app.get("/posts/{id}")
