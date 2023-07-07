@@ -1,6 +1,7 @@
 from typing import List, Optional
 from fastapi import FastAPI, HTTPException, status, Response
-from schemas.models import Post
+from ..schemas.models import Post
+from ..adapters.psql_connector import DatabaseConnection, QueryDatabase
 
 app = FastAPI()
 
@@ -69,8 +70,21 @@ def get_post_by_id(id: int) -> dict:
     return {"data": data}
 
 
+from typing import Dict
+from fastapi import Response
+
+
 @app.delete("/posts/{id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_post(id: int):
+def delete_post(id: int) -> Response:
+    """
+    Delete a post by its ID.
+
+    Args:
+        id (int): The ID of the post to delete.
+
+    Returns:
+        A 204 No Content HTTP status code if the post is found and deleted.
+    """
     data = find_post(id)
     if data:
         global my_posts
@@ -81,7 +95,17 @@ def delete_post(id: int):
 
 
 @app.put("/posts/{id}", status_code=status.HTTP_202_ACCEPTED)
-def update_post(id: int, post: Post):
+def update_post(id: int, post: Post) -> Dict[str, object]:
+    """
+    Update a post by its ID.
+
+    Args:
+        id (int): The ID of the post to update.
+        post (Post): The new post data.
+
+    Returns:
+        A dictionary with a response message and the updated data if the post is found and updated.
+    """
     existing_post = find_post(id)
     if existing_post:
         global my_posts
