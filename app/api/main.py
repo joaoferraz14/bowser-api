@@ -1,8 +1,8 @@
 import os
-from typing import List, Optional
+from typing import Optional, Dict
 from fastapi import FastAPI, HTTPException, status, Response
 from ..schemas.models import Post
-from ..adapters.psql_database_manager import DatabaseManager
+from ..handlers.psql_database_manager import DatabaseManager
 from dotenv import load_dotenv
 from ..utils.utils import path_builder
 
@@ -16,8 +16,6 @@ app = FastAPI()
 db_manager = DatabaseManager()
 query_database = db_manager.connect_to_database()
 
-my_posts = []
-
 
 def find_post(id: int) -> Optional[dict]:
     """
@@ -25,20 +23,16 @@ def find_post(id: int) -> Optional[dict]:
     :param id: The id of the post to find.
     :return: The post with the given id if it exists; raises HTTPException if it does not exist.
     """
-    post = next((post for post in my_posts if post["id"] == id), None)
+    with open(
+        path_builder(CURRENT_DIR, SQL_FOLDER, "get_post_by_id.sql"), "r"
+    ) as query:
+        query_database.execute_query(query.read(), (id,))
+        post = query_database.fetch_all_rows()
     if post:
         return {"data": post}
     raise HTTPException(
         status_code=status.HTTP_404_NOT_FOUND, detail=f"Post {id} not found"
     )
-
-
-def get_max_id_from_posts() -> int:
-    """
-    Function to get the max id from the posts list.
-    :return: The maximum id among the posts; 0 if there are no posts.
-    """
-    return max((post["id"] for post in my_posts), default=0)
 
 
 @app.get("/status", status_code=status.HTTP_200_OK)
@@ -53,11 +47,9 @@ def get_posts() -> dict:
     Endpoint to get all the posts.
     :return: All posts in a dictionary under the 'data' key.
     """
-    sql_file_path = path_builder(CURRENT_DIR, SQL_FOLDER, "get_all_posts.sql")
-    with open(sql_file_path, "r") as query:
+    with open(path_builder(CURRENT_DIR, SQL_FOLDER, "get_all_posts.sql"), "r") as query:
         query_database.execute_query(query.read())
-        rows = query_database.fetch_all_rows()
-    return {"data": rows}
+    return {"data": query_database.fetch_all_rows()}
 
 
 @app.post("/posts", status_code=status.HTTP_201_CREATED)
@@ -67,12 +59,20 @@ async def create_post(post: Post) -> dict:
     :param post: Post input model.
     :return: The newly created post in a dictionary under the 'data' key.
     """
-    sql_file_path = path_builder(CURRENT_DIR, SQL_FOLDER, "create_new_post.sql")
-    with open(sql_file_path, "r") as query:
-        query = query.read()
-        query_database.execute_query(query, (post.title, post.content, post.published))
-    query_database.commit_changes_to_db()
-    return {"data": post}
+    with open(
+        path_builder(CURRENT_DIR, SQL_FOLDER, "create_new_post.sql"), "r"
+    ) as query:
+        query_database.execute_query(
+            query.read(), (post.title, post.content, post.published)
+        )
+        query_database.commit_changes_to_db()
+    with open(
+        path_builder(CURRENT_DIR, SQL_FOLDER, "last_created_post.sql"), "r"
+    ) as query:
+        query_database.execute_query(
+            query.read(), (post.title, post.content, post.published)
+        )
+    return {"data": query_database.fetch_all_rows()}
 
 
 @app.get("/posts/{id}")
@@ -82,12 +82,7 @@ def get_post_by_id(id: int) -> dict:
     :param id: The id of the post to get.
     :return: The post with the given id in a dictionary under the 'data' key.
     """
-    data = find_post(id)
-    return {"data": data}
-
-
-from typing import Dict
-from fastapi import Response
+    return find_post(id)
 
 
 @app.delete("/posts/{id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -101,13 +96,14 @@ def delete_post(id: int) -> Response:
     Returns:
         A 204 No Content HTTP status code if the post is found and deleted.
     """
-    data = find_post(id)
-    if data:
-        global my_posts
-        my_posts = [
-            post for post in my_posts if post["id"] != id
-        ]  # creates the array of data with everything but that id
-        return Response(status_code=status.HTTP_204_NO_CONTENT)
+    with open(
+        path_builder(CURRENT_DIR, SQL_FOLDER, "delete_post_by_id.sql"), "r"
+    ) as query:
+        post = find_post(id)
+        if post:
+            query_database.execute_query(query.read(), (id,))
+            query_database.commit_changes_to_db()
+            return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @app.put("/posts/{id}", status_code=status.HTTP_202_ACCEPTED)
@@ -122,12 +118,13 @@ def update_post(id: int, post: Post) -> Dict[str, object]:
     Returns:
         A dictionary with a response message and the updated data if the post is found and updated.
     """
-    existing_post = find_post(id)
-    if existing_post:
-        global my_posts
-        my_posts = [post for post in my_posts if post["id"] != id]
-        updated_post = existing_post["data"]
-        update_data = post.dict(exclude_unset=True)
-        updated_post.update(update_data)
-        my_posts.append(updated_post)
-        return {"response": "Post updated successfully", "data": updated_post}
+    post = find_post(id)
+    if post:
+        with open(
+            path_builder(CURRENT_DIR, SQL_FOLDER, "update_post.sql"), "r"
+        ) as query:
+            query_database.execute_query(
+                query.read(), (post.title, post.content, post.published, id)
+            )
+            query_database.commit_changes_to_db()
+            return {"updated_post": find_post(id)}
