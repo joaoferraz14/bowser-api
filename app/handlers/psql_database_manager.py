@@ -2,7 +2,7 @@ import os
 import time
 import logging
 from typing import Union, List, Dict, Any
-from .psql_connection import DatabaseConnection
+from ..adapters.psql_connection import DatabaseConnection
 
 
 class QueryDatabase:
@@ -27,7 +27,7 @@ class QueryDatabase:
             if not self.db_connection.connection:
                 self.db_connection.connect_to_db()
             self.db_connection.cursor.execute(query, *args)
-            return "Query ran successfully"
+            return logging.info("Query ran successfully")
         except Exception as e:
             return logging.error(f"Failed to execute query: {e}")
 
@@ -74,9 +74,7 @@ class DatabaseManager:
                 )
                 self.connection.connect_to_db()
                 logging.info("Database connection succeeded")
-                print("Logged in successfully")
                 return QueryDatabase(self.connection)
             except Exception as e:
                 logging.error(f"Connection to database failed. Error: {e}")
-                print(f"Connection to database failed. Error: {e}")
                 time.sleep(2)
