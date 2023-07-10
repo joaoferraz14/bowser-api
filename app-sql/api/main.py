@@ -1,11 +1,9 @@
 import os
-import json
 from typing import Optional, Dict
 from fastapi import FastAPI, HTTPException, status, Response, Depends
 from ..schemas.models import Post
 from ..handlers.psql_database_manager import DatabaseManager
 from dotenv import load_dotenv
-from sqlalchemy.orm import Session
 from ..utils.utils import path_builder
 
 
