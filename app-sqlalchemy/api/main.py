@@ -1,7 +1,7 @@
 from typing import Dict
 from fastapi import FastAPI, HTTPException, status, Response, Depends
 from sqlalchemy.orm import Session
-from ..schemas.models import Post
+from ..schemas.models import CreatePost, UpdatePost, PostResponse
 from ..handlers.database_manager import get_db
 from dotenv import load_dotenv
 from ..orm import models
@@ -30,8 +30,8 @@ def get_posts(db: Session = Depends(get_db)) -> dict:
     return {"data": posts}
 
 
-@app.post("/posts", status_code=status.HTTP_201_CREATED)
-def create_post(post: Post, db: Session = Depends(get_db)) -> dict:
+@app.post("/posts", status_code=status.HTTP_201_CREATED, response_model=PostResponse)
+def create_post(post: CreatePost, db: Session = Depends(get_db)) -> dict:
     """
     Endpoint to create a new post.
     :param post: Post input model.
@@ -43,7 +43,7 @@ def create_post(post: Post, db: Session = Depends(get_db)) -> dict:
         db.add(db_post)
         db.commit()
         db.refresh(db_post)
-        return {"data": db_post}
+        return db_post
     except Exception as e:
         db.rollback()
         raise HTTPException(
@@ -63,7 +63,7 @@ def get_post_by_id(id: int, db: Session = Depends(get_db)) -> dict:
     db_post = db.query(models.Post).filter(models.Post.id==id).first()
     try:
         if db_post:
-            return {"data": db_post}
+            return db_post.__dict__
         raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Post with id: {id} not found"
@@ -99,7 +99,7 @@ def delete_post(id: int, db: Session = Depends(get_db)) -> Response:
 
 
 @app.put("/posts/{id}", status_code=status.HTTP_202_ACCEPTED)
-def update_post(id: int, post: Post, db: Session = Depends(get_db)) -> Dict[str, object]:
+def update_post(id: int, post: UpdatePost, db: Session = Depends(get_db)) -> Dict[str, object]:
     """
     Update a post by its ID.
 
