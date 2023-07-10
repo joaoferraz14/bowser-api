@@ -1,12 +1,17 @@
 import os
+import json
 from typing import Optional, Dict
-from fastapi import FastAPI, HTTPException, status, Response
+from fastapi import FastAPI, HTTPException, status, Response, Depends
 from ..schemas.models import Post
 from ..handlers.psql_database_manager import DatabaseManager
 from dotenv import load_dotenv
+from sqlalchemy.orm import Session
 from ..utils.utils import path_builder
 
+
 load_dotenv()
+
+
 
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 SQL_FOLDER = "../sql-statements"
@@ -118,8 +123,8 @@ def update_post(id: int, post: Post) -> Dict[str, object]:
     Returns:
         A dictionary with a response message and the updated data if the post is found and updated.
     """
-    post = find_post(id)
-    if post:
+    post_id = find_post(id)
+    if post_id:
         with open(
             path_builder(CURRENT_DIR, SQL_FOLDER, "update_post.sql"), "r"
         ) as query:
