@@ -1,14 +1,16 @@
-from typing import Dict
+from typing import Dict, List
 from fastapi import FastAPI, HTTPException, status, Response, Depends
 from sqlalchemy.orm import Session
-from ..schemas.models import CreatePost, UpdatePost, PostResponse
+from ..schemas.schemas import CreatePost, UpdatePost, PostResponse, UserCreate, UserResponse
 from ..handlers.database_manager import get_db
+from passlib.context import CryptContext
 from dotenv import load_dotenv
 from ..orm import models
 from ..adapters.database_connection import engine
 
 load_dotenv()
 
+pwd_context = CryptContext(schemes=["bcrypt"], depecrated="auto")
 models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
@@ -19,15 +21,14 @@ def root() -> dict:
     return {"Message": "Server is running"}
 
 
-@app.get("/posts")
+@app.get("/posts", response_model=List[PostResponse])
 def get_posts(db: Session = Depends(get_db)) -> dict:
     """
     Endpoint to get all the posts.
     :param db: Database session dependency.
     :return: All posts in a dictionary under the 'data' key.
     """
-    posts = db.query(models.Post).all()
-    return {"data": posts}
+    return db.query(models.Post).all()
 
 
 @app.post("/posts", status_code=status.HTTP_201_CREATED, response_model=PostResponse)
@@ -52,7 +53,7 @@ def create_post(post: CreatePost, db: Session = Depends(get_db)) -> dict:
         )
 
 
-@app.get("/posts/{id}")
+@app.get("/posts/{id}", response_model=PostResponse)
 def get_post_by_id(id: int, db: Session = Depends(get_db)) -> dict:
     """
     Endpoint to get a post by id.
@@ -98,7 +99,7 @@ def delete_post(id: int, db: Session = Depends(get_db)) -> Response:
     )
 
 
-@app.put("/posts/{id}", status_code=status.HTTP_202_ACCEPTED)
+@app.put("/posts/{id}", status_code=status.HTTP_202_ACCEPTED, response_model=PostResponse)
 def update_post(id: int, post: UpdatePost, db: Session = Depends(get_db)) -> Dict[str, object]:
     """
     Update a post by its ID.
@@ -121,3 +122,20 @@ def update_post(id: int, post: UpdatePost, db: Session = Depends(get_db)) -> Dic
         status_code=status.HTTP_404_NOT_FOUND,
         detail=f"Post with ID {id} not found"
     )
+
+@app.post("/users", status_code=status.HTTP_201_CREATED, response_model=UserResponse)
+def create_user(user: UserCreate, db: Session = Depends(get_db)):
+    try:
+
+        
+        new_user = models.User(**user.dict())
+        db.add(new_user)
+        db.commit()
+        db.refresh(new_user)
+        return new_user
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to create post {e}",
+        )
