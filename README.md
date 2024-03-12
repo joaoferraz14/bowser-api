@@ -2,63 +2,79 @@
 
 **Version:** 0.1.0
 
-This is a FastAPI project to manage posts. This documentation describes the endpoints available in this API.
+bowser-api is a FastAPI project for managing posts. This documentation outlines the available endpoints and provides installation instructions.
 
 ## Installation
 
-First, you'll need to install the required packages. You can do this by running the following command:
+To run the application, follow these steps:
 
-```bash
-pip install -r requirements.txt
-uvicorn app.api.main:app --reload
-```
-The --reload flag enables hot reloading, which means the server will automatically update whenever you make changes to the code.
+1. Install the required packages by running the following command:
+
+    ```bash
+    pip install -r requirements.txt
+    ```
+
+2. Start the application with uvicorn.
+
+    ```bash
+    uvicorn app-sqlalchemy.api.main:app
+    ```
 
 ## API Endpoints
 
 ### `/status`
 
 - **Method:** `GET`
-- **Summary:** Server status endpoint. Returns a status message.
+- **Summary:** Check the server status.
 - **Responses:** 
-  - **200:** Successful Response
+  - **200 OK:** The server is running.
 
 ### `/posts`
 
 - **Method:** `GET`
-- **Summary:** Endpoint to get all the posts.
+- **Summary:** Retrieve all posts.
+- **Query Parameters:**
+  - `limit` (Optional, Integer): Limit the number of posts to retrieve (default is 10).
+  - `skip` (Optional, Integer): Skip the first N posts (default is 0).
+  - `search` (Optional, String): Search posts by title keyword.
 - **Responses:** 
-  - **200:** Successful Response
+  - **200 OK:** Successfully retrieved posts.
 
 - **Method:** `POST`
-- **Summary:** Endpoint to create a new post.
+- **Summary:** Create a new post.
+- **Request Body:** Post object with required fields `title` and `content`.
 - **Responses:** 
-  - **201:** Successful Response
-  - **422:** Validation Error
+  - **201 Created:** Post created successfully.
+  - **422 Unprocessable Entity:** Validation error.
 
 ### `/posts/{id}`
 
 - **Method:** `GET`
-- **Summary:** Endpoint to get a post by id.
+- **Summary:** Retrieve a post by ID.
 - **Parameters:** `id` (Path parameter, Required, Integer)
 - **Responses:** 
-  - **200:** Successful Response
-  - **422:** Validation Error
+  - **200 OK:** Successfully retrieved the post.
+  - **404 Not Found:** Post not found.
+  - **422 Unprocessable Entity:** Validation error.
 
 - **Method:** `PUT`
 - **Summary:** Update a post by its ID.
 - **Parameters:** `id` (Path parameter, Required, Integer)
+- **Request Body:** Updated Post object.
 - **Responses:** 
-  - **202:** Successful Response
-  - **422:** Validation Error
+  - **202 Accepted:** Post updated successfully.
+  - **404 Not Found:** Post not found.
+  - **422 Unprocessable Entity:** Validation error.
 
 - **Method:** `DELETE`
 - **Summary:** Delete a post by its ID.
 - **Parameters:** `id` (Path parameter, Required, Integer)
 - **Responses:** 
-  - **204:** Successful Response
-  - **422:** Validation Error
+  - **204 No Content:** Post deleted successfully.
+  - **404 Not Found:** Post not found.
 
 ## Schema Definitions
 
-- **Post:** Object that represents a post, required fields are `title` and `content`. 
+- **Post:** Represents a post with required fields `title` and `content`.
+
+STOPPED AT 9:27:55

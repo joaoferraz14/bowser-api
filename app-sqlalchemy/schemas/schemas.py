@@ -6,9 +6,7 @@ from datetime import datetime
 class BasePost(BaseModel):
     title: str
     content: str
-    published: Optional[
-        bool
-    ] = True 
+    published: Optional[bool] = True
 
 
 class CreatePost(BasePost):
@@ -19,11 +17,28 @@ class UpdatePost(BasePost):
     pass
 
 
+class UserResponse(BaseModel):
+    id: str
+    email: EmailStr
+    created_at: datetime
+
+    class Config:
+        orm_mode = True
+
+
+class UserLogin(BaseModel):
+    email: EmailStr
+    password: str
+
+
 class PostResponse(BasePost):
     id: int
     created_at: datetime
+    owner_id: int
+    owner: UserResponse
+
     class Config:
-        orm_mode=True
+        orm_mode = True
 
 
 class UserCreate(BaseModel):
@@ -31,9 +46,10 @@ class UserCreate(BaseModel):
     password: str
 
 
-class UserResponse(BaseModel):
-    id: str
-    email: EmailStr
-    created_at: datetime
-    class Config:
-        orm_mode=True
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+
+
+class TokenData(BaseModel):
+    id: Optional[str] = None
