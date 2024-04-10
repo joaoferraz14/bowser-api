@@ -17,19 +17,6 @@ def get_posts(
     skip: int = 0,
     search: Optional[str] = "",
 ) -> List[PostResponse]:
-    """
-    Get all the posts.
-
-    Args:
-        db (Session): Database session dependency.
-        user_id (int): The user's ID.
-        limit (int): The number of posts to retrieve.
-        skip (int): The number of posts to skip.
-        search (Optional[str]): Search query for posts by title.
-
-    Returns:
-        List[PostResponse]: List of post responses.
-    """
     return (
         db.query(models.Post)
         .filter(models.Post.title.contains(search))
@@ -45,17 +32,6 @@ def create_post(
     db: Session = Depends(get_db),
     user_id: int = Depends(oauth2.get_current_user),
 ) -> PostResponse:
-    """
-    Create a new post.
-
-    Args:
-        post (CreatePost): Post input model.
-        db (Session): Database session dependency.
-        user_id (int): The user's ID.
-
-    Returns:
-        PostResponse: The newly created post.
-    """
     try:
         db_post = models.Post(owner_id=user_id.id, **post.dict())
         db.add(db_post)
@@ -76,17 +52,6 @@ def get_post_by_id(
     db: Session = Depends(get_db),
     user_id: int = Depends(oauth2.get_current_user),
 ) -> PostResponse:
-    """
-    Get a post by ID.
-
-    Args:
-        id (int): The ID of the post to retrieve.
-        db (Session): Database session dependency.
-        user_id (int): The user's ID.
-
-    Returns:
-        PostResponse: The post with the given ID.
-    """
     db_post = db.query(models.Post).filter(models.Post.id == id).first()
     if db_post:
         return db_post
@@ -101,17 +66,6 @@ def delete_post(
     db: Session = Depends(get_db),
     user_id: int = Depends(oauth2.get_current_user),
 ) -> Response:
-    """
-    Delete a post by its ID.
-
-    Args:
-        id (int): The ID of the post to delete.
-        db (Session): Database session dependency.
-        user_id (int): The user's ID.
-
-    Returns:
-        Response: A 204 No Content HTTP status code if the post is found and deleted.
-    """
     db_post = db.query(models.Post).get(id)
 
     if db_post is None:
@@ -137,18 +91,6 @@ def update_post(
     db: Session = Depends(get_db),
     user_id: int = Depends(oauth2.get_current_user),
 ) -> PostResponse:
-    """
-    Update a post by its ID.
-
-    Args:
-        id (int): The ID of the post to update.
-        post (UpdatePost): The updated post data.
-        db (Session): Database session dependency.
-        user_id (int): The user's ID.
-
-    Returns:
-        PostResponse: The updated post.
-    """
     db_post_query = db.query(models.Post).filter(models.Post.id == id)
     post_data = db_post_query.first()
 
